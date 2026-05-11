@@ -1,0 +1,64 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM, Dropout
+
+df = pd.read_csv(r"C:\Users\vaish\Downloads\GOOG.csv")
+
+df.head()
+df.tail()
+
+df.info()
+
+df.isnull().sum()
+
+X = df['open'].values.reshape(-1,1)
+X
+
+scaler = MinMaxScaler(feature_range=(0, 1))
+X_scaled = scaler.fit_transform(X)
+
+
+
+X_train = []
+y_train = []
+for i in range(60, len(X_scaled)):
+    X_train.append(X_scaled[i-60:i, 0])
+    y_train.append(X_scaled[i, 0])
+
+X_train, y_train = np.array(X_train), np.array(y_train)
+
+
+
+X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+model = Sequential()
+model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1],1)))
+model.add(Dropout(0.2))
+model.add(LSTM(units=50, return_sequences=True))
+model.add(Dropout(0.2))
+model.add(LSTM(units=50))
+model.add(Dropout(0.2))
+model.add(Dense(units=1))
+
+
+model.compile(optimizer='adam', loss='mean_squared_error')
+
+
+model.fit(X_train, y_train, epochs=50, batch_size=32)
+
+
+predicted_stock_price = model.predict(X_train)
+
+predicted_stock_price = scaler.inverse_transform(predicted_stock_price)
+
+plt.figure(figsize=(12,6))
+plt.plot(X[60:], color='red', label='Real Google Stock Price')
+plt.plot(predicted_stock_price, color='blue', label='Predicted Google Stock Price')
+plt.title('Google Stock Price Prediction (RNN/LSTM)')
+plt.xlabel('Time (Days)')
+plt.ylabel('Stock Price')
+plt.legend()
+plt.show()
